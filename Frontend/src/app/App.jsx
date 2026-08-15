@@ -19,6 +19,11 @@ const App = () => {
 
   const handleMount = (editor) => {
     editorRef.current = editor;
+    new MonacoBinding(
+      yText, 
+      editorRef.current.getModel(), 
+      new Set([editorRef.current]), 
+    );
   }
 
   const handleJoin = (e) => {
@@ -28,24 +33,36 @@ const App = () => {
   }
 
   useEffect(() => {
-    if (username && editorRef.current) {
+    if (userName) {
       const provider = new SocketIOProvider("http://localhost:3000", "monaco", ydoc, {
-      autoConnect: true,
-    });
+        autoConnect: true,
+      });
 
-    provider.awareness.setLocalStateField("user", { username });
-    provider.awareness.on("change", () => {
+      provider.awareness.setLocalStateField("user", { userName });
+
       const states = Array.from(provider.awareness.getStates().values());
-      setUsers(states.map(state => state.user)).filter(user => Boolean(user.username));
-    });
-    const monacoBinding = new MonacoBinding(
-      yText, 
-      editorRef.current.getModel(), 
-      new Set([editorRef.current]), 
-      provider.awareness
-    );
+
+
+      setUsers(states.filter(state => state.user && state.user.userName).map(state => state.user));
+
+      provider.awareness.on("change", () => {
+        const states = Array.from(provider.awareness.getStates().values());
+        setUsers(states.filter(state => state.user && state.user.userName).map(state => state.user));
+      });
+      
+      function handleBeforeUnload() {
+        provider.awareness.setLocalStateField("user", null);
+      }
+
+      window.addEventListener("beforeunload", handleBeforeUnload);
+
+      
+      return () => {
+        provider.disconnect();
+        window.removeEventListener("beforeunload", handleBeforeUnload);
+      };
     }
-  }, [editorRef.current, username]);
+  }, [userName]);
 
   if (!userName) {
     return (
@@ -72,7 +89,14 @@ const App = () => {
   return (
     <main className="h-screen w-full bg-gray-950 flex gap-4 p-4">
       <aside className="h-full w-1/4 bg-amber-50 rounded-lg">
-        
+        <h2 className="text-2xl font-bold p-4 border-gray-300">Users</h2>
+        <ul className="p-4">
+          {users.map((user, index) => (
+            <li key={index} className="mb-2">
+              {user.userName}
+            </li>
+          ))}
+        </ul>
       </aside>
       <section className="w-3/4 bg-neutral-800 rounded-lg overflow-hidden">  
         <Editor
