@@ -14,7 +14,7 @@ const io = new Server(httpServer, {
 });
 
 const ySocketIO = new YSocketIO(io)
-ySocketID.initialize();
+ySocketIO.initialize();
 
 
 app.get("/", (req, res) => {
@@ -32,5 +32,5 @@ app.get("/health", (req, res) => {
 });
 
 httpServer.listen(3000, () => {
-    console.log("Server is running on port 3000");
+    console.log(`Server is running on port http://localhost:3000`);
 });
