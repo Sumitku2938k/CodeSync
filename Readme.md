@@ -80,3 +80,47 @@ To serve the frontend and backend from a single domain and port, follow these st
 
 4.  **Run the Backend Server**
     -   Once the backend server is running, you can access the complete application (both frontend and backend) from the backend's URL.
+
+## 🐳 Dockerize and Run Backend (Running Backend Server using Docker)
+
+This section explains how to containerize and run the backend application using Docker.
+
+### 1. Dockerfile
+
+Here is the `Dockerfile` used to create the image for the backend server:
+
+```dockerfile
+FROM node:20-alpine
+
+COPY ./Backend .
+
+RUN npm install
+
+CMD ["node", "server.js"]
+```
+
+### 2. Build the Docker Image
+
+To build the Docker image, run the following command from the root of the project:
+
+```bash
+docker build -t backend .
+```
+
+### 3. Run the Docker Container
+
+Once the image is built, you can run it as a container. The server inside the container runs on port `3000`. To access it from your host machine, you need to map a host port to the container's port using the `-p` flag.
+
+For example, to map port `4000` on your host to port `3000` in the container, run:
+
+```bash
+docker run -p 4000:3000 backend
+```
+
+You will see the server running confirmation:
+
+```
+Server is running on port http://localhost:3000
+```
+
+Now, you can access the application in your browser at `http://localhost:4000`.
