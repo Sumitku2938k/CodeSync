@@ -90,7 +90,7 @@ This section explains how to containerize and run the backend application using 
 Here is the `Dockerfile` used to create the image for the backend server:
 
 ```dockerfile
-FROM node:20-alpine
+FROM node:22-alpine
 
 COPY ./Backend .
 
@@ -124,3 +124,73 @@ Server is running on port http://localhost:3000
 ```
 
 Now, you can access the application in your browser at `http://localhost:4000`.
+
+## 🐳 Multi-Stage Docker Build
+
+This approach uses a single `Dockerfile` to build both the frontend and backend, resulting in a final, optimized image that serves the complete application.
+
+### 1. Multi-Stage Dockerfile
+
+The `Dockerfile` is split into two main stages:
+
+1.  **`frontend-builder`**: This stage installs dependencies and builds the static frontend files.
+2.  **`backend-builder`**: This stage sets up the backend server and copies the built frontend assets from the previous stage.
+
+```dockerfile
+# Stage 1: Build the frontend
+FROM node:22-alpine as frontend-builder
+
+# Copy Frontend folder content to the app folder
+COPY ./Frontend /app
+
+# Set the present working directory in the container
+WORKDIR /app
+
+# Install all the frontend dependencies
+RUN npm install
+
+# Build the dist folder
+RUN npm run build
+
+# Stage 2: Build the backend and serve the frontend
+FROM node:22-alpine as backend-builder
+
+# Copy the Backend folder content to the app folder
+COPY ./Backend /app
+
+# Set the present working directory
+WORKDIR /app
+
+# Install all the backend dependencies
+RUN npm install
+
+# Copy the dist folder from the frontend-builder stage to the backend's public folder
+COPY --from=frontend-builder /app/dist ./public
+
+# Run the server
+CMD ["node", "server.js"]
+```
+
+### 2. Build the Docker Image
+
+Build the final image using the following command. This will execute both stages and create an image named `server`.
+
+```bash
+docker build -t server .
+```
+
+### 3. Run the Docker Container
+
+Run the container, mapping your local port `4000` to the container's port `3000`.
+
+```bash
+docker run -p 4000:3000 server
+```
+
+The server will start, and you'll see the output:
+
+```
+Server is running on port http://localhost:3000
+```
+
+You can now access the full application from your browser at **`http://localhost:4000`**.
