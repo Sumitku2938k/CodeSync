@@ -194,3 +194,135 @@ Server is running on port http://localhost:3000
 ```
 
 You can now access the full application from your browser at **`http://localhost:4000`**.
+
+## ☁️ Push Docker Image to Amazon ECR
+
+This section shows how to push your Docker image to Amazon Elastic Container Registry (ECR) so it can be deployed on AWS.
+
+### 1. Create an IAM User in AWS (if not already created)
+
+If you do not already have an AWS user with programmatic access, create one first.
+
+Open the AWS IAM Users page:
+
+https://us-east-1.console.aws.amazon.com/iam/home?region=ap-south-1#/users
+
+Then follow these steps:
+
+1. Click `Add users`
+2. Enter a username, for example: `docker-aws-user`
+3. Select **AWS access type**: `Programmatic access`
+4. Click **Next: Permissions**
+5. Attach a policy such as:
+   - `AmazonEC2ContainerRegistryFullAccess`
+   - or `AdministratorAccess` for a simple setup
+6. Click **Next** and then **Create user**
+7. After user creation, click the username
+8. Go to the **Security credentials** tab
+9. Under **Access keys**, click **Create access key**
+10. Download the CSV file or copy the values shown
+
+Important values to store:
+- `Access key ID`
+- `Secret access key`
+
+These are the credentials you will use with the AWS CLI.
+
+### 2. Install AWS CLI
+
+If AWS CLI is not installed, install it first.
+
+Then configure it by running:
+
+```bash
+aws configure
+```
+
+When prompted, enter:
+- `AWS Access Key ID`: your access key ID
+- `AWS Secret Access Key`: your secret access key
+- `Default region name`: `ap-south-1`
+- `Default output format`: `json`
+
+Example:
+
+```bash
+AWS Access Key ID [None]: AKIAxxxxxxxxxxxxxxxx
+AWS Secret Access Key [None]: your-secret-access-key
+Default region name [None]: ap-south-1
+Default output format [None]: json
+```
+
+> Use `json` as the output format unless you specifically want a different format.
+
+### 3. Create an ECR Repository
+
+Create a repository in AWS ECR:
+
+```bash
+aws ecr create-repository --repository-name docker-aws/server --region ap-south-1
+```
+
+This will return a repository URI like:
+
+```bash
+481810542997.dkr.ecr.ap-south-1.amazonaws.com/docker-aws/server
+```
+
+### 3. Log in to ECR
+
+Authenticate Docker with AWS ECR:
+
+```bash
+aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 481810542997.dkr.ecr.ap-south-1.amazonaws.com
+```
+
+### 4. Build the Docker Image
+
+From the project root, build the image:
+
+```bash
+docker build -t server .
+```
+
+Or tag it with a custom name:
+
+```bash
+docker tag server:latest 481810542997.dkr.ecr.ap-south-1.amazonaws.com/docker-aws/server:latest
+```
+
+### 5. Push the Image to ECR
+
+```bash
+docker push 481810542997.dkr.ecr.ap-south-1.amazonaws.com/docker-aws/server:latest
+```
+
+### 6. Verify the Image in AWS ECR
+
+Open the AWS Console and go to:
+- Amazon ECR
+- Repositories
+- `docker-aws/server`
+
+You should see the `latest` image uploaded successfully.
+
+### 7. Pull the Image Later
+
+To pull the same image later:
+
+```bash
+docker pull 481810542997.dkr.ecr.ap-south-1.amazonaws.com/docker-aws/server:latest
+```
+
+### Example Full Workflow
+
+```bash
+aws configure
+aws ecr create-repository --repository-name docker-aws/server --region ap-south-1
+aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 481810542997.dkr.ecr.ap-south-1.amazonaws.com
+docker build -t server .
+docker tag server:latest 481810542997.dkr.ecr.ap-south-1.amazonaws.com/docker-aws/server:latest
+docker push 481810542997.dkr.ecr.ap-south-1.amazonaws.com/docker-aws/server:latest
+```
+
+This is the standard process to push a Docker image to Amazon ECR and use it for deployment on AWS services like ECS, EC2, or EKS.
