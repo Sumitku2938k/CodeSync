@@ -326,3 +326,137 @@ docker push 481810542997.dkr.ecr.ap-south-1.amazonaws.com/docker-aws/server:late
 ```
 
 This is the standard process to push a Docker image to Amazon ECR and use it for deployment on AWS services like ECS, EC2, or EKS.
+
+## 🚀 Deploying on AWS ECS (Fargate)
+
+This guide helps you deploy your app on **AWS ECS using Fargate** in a clean, step-by-step way.
+
+### 📌 What is a Task Definition?
+
+A **Task Definition** is like a blueprint for your containerized app.  
+It defines:
+
+- Docker image
+- CPU and memory
+- Networking
+- Port mappings
+- IAM roles
+
+Go to ECS in the AWS Management Console then to Task Definition.
+
+---
+
+### 1) Build for Correct Architecture (Important)
+
+If you're on Windows and face OS/Architecture issues, build for Linux AMD64:
+
+```bash
+docker buildx build --platform linux/amd64 -t docker-aws/server .
+```
+
+Then tag and push to ECR:
+
+```bash
+docker tag docker-aws/server:latest <your-account-id>.dkr.ecr.<region>.amazonaws.com/<repo-name>:latest
+docker push <your-account-id>.dkr.ecr.<region>.amazonaws.com/<repo-name>:latest
+```
+
+---
+
+### 2) Create Task Definition in ECS
+
+1. Open **AWS Console → ECS → Task Definitions**
+2. Click **Create new Task Definition**
+3. Select **Launch type: Fargate**
+4. Set:
+   - **CPU**: `1 vCPU`
+   - **Memory**: `3 GB` (default)
+5. In **Task Role** and **Task Execution Role**, select:
+   - `ecsTaskExecutionRole`  
+   > If missing, create it in IAM first.
+6. In **Container image**, browse and select latest image from **ECR**
+7. In **Port mappings**, set container port to:
+   - `3000`
+
+---
+
+### 3) Create ECS Cluster
+
+1. Go to **ECS → Clusters**
+2. Click **Create cluster**
+3. Choose **Networking only (AWS Fargate)**
+4. After creating the cluster, go to the cluster and then to the create service. (Service is the one that runs your defined task)
+
+---
+
+### 4) Create VPC + Networking
+
+1. Create a VPC using **“VPC and more”**
+2. While creating ECS service, select:
+   - Your new **VPC** in the networking section
+   - **Public subnets** (for internet access)
+
+---
+
+### 5) Security Group Setup
+
+Create a Security Group (in EC2) attached to the same VPC.
+
+### Inbound Rules:
+- `80` → Source: `0.0.0.0/0` (Anywhere IPv4)
+- `3000` → Source: `0.0.0.0/0` (Anywhere IPv4)
+
+Use this SG in ECS Service networking settings.
+
+---
+
+### 6) Create Application Load Balancer (ALB)
+
+Go to **EC2 → Load Balancers → Create Load Balancer → Application Load Balancer**
+
+Configure:
+
+- **VPC**: same VPC as ECS
+- **Availability Zones/Subnets**: select both AZs
+- **Security Group**: the one you created above
+- **Listener**: `HTTP`
+- **Target Group Port**: `3000`
+- Give clear names to ALB and Target Group
+
+Create the ALB.
+
+---
+
+### 7) Create ECS Service
+
+1. Open your ECS cluster
+2. Click **Create Service**
+3. Select the task definition
+4. In Networking, select:
+   - VPC + public subnets
+   - Security Group created earlier
+5. In Load Balancing:
+   - Enable **Use Load Balancing**
+   - Select the ALB + Target Group created above
+6. Click **Next → Create Service**
+
+---
+
+### 8) Access Your App
+
+Once service is running and healthy:
+
+- Open the **ALB DNS name**  
+- Your app should be live 🎉
+
+---
+
+### 9) Connect Domain + HTTPS (Recommended)
+
+To make production-ready:
+
+1. Point your custom domain to ALB (via Route 53 or your DNS provider)
+2. Create SSL cert in **AWS Certificate Manager (ACM)**
+3. Attach certificate to ALB listener (HTTPS :443)
+
+---
