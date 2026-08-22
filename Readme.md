@@ -107,7 +107,7 @@ To build the Docker image, run the following command from the root of the projec
 docker build -t backend .
 ```
 
-### 3. Run the Docker Container
+### 3. Run the Docker Container using Port Mapping
 
 Once the image is built, you can run it as a container. The server inside the container runs on port `3000`. To access it from your host machine, you need to map a host port to the container's port using the `-p` flag.
 
